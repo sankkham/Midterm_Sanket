@@ -1,0 +1,468 @@
+---
+title: "Sanket Khamkar_Midterm"
+author: "Sanket"
+date: "2024-11-04"
+output: html_document
+---
+
+
+• Correctly import the data. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(forecast)
+library(knitr)
+library(TTR)
+library(dplyr)
+library(ggplot2)
+data <- read.csv("C:/Users/Sanket Khamkar/Downloads/sales.csv")
+names(data)
+sales_ts <- ts(data$Sales, start = c(2020, 1), frequency = 12)
+
+
+```
+
+Plot and Inference
+•	Show a time series plot. 
+•	Please summaries your observations of the times series plot
+
+
+```{r}
+autoplot(sales_ts)
+
+```
+
+• The time series plot shows years on X-axis and sales on Y-axis
+
+• The plot shows there was a increasing trend from years 2020 to 2024. This suggests there is a growth in sales over time, maybe because this growth suggests the product’s popularity or necessity is rising, which could be due to factors like aging populations, seasonal illnesses, or heightened awareness because of covid.
+
+• There are noticeable recurring peaks and dips, especially from 2023 onwards, indicating possible seasonality. For healthcare products, this could correspond to seasonal illness cycles (e.g., flu season), promotional campaigns, or insurance cycles that affect when customers make purchases. 
+
+• Toward the end of the series in 2024, there is a harsh downward trend. This could indicate a temporary drop in sales or the start of a potential decline, which may need further analysis to determine if it's a seasonal effect or a more prolonged issue.
+
+
+Central Tendency 
+• What are the min, max, mean, median, 1st, and 3rd Quartile values of the times series?  
+• Show the box plot.  
+• Can you summarize your observation about the time series from the summary stats and 
+box plot?  
+
+```{r}
+summary(sales_ts)
+```
+```{r}
+boxplot(sales_ts, main="Box Plot of Sales", xlab="Sales")
+```
+
+The mean (8,753) is greater than the median (7,246), indicating data is right-skewed. This suggests that there are some higher sales figures pulling the average up.
+This could suggest that while most of the time demand is stable, there are occasional big order days.
+
+The difference between the 1st quartile (2,892) and the 3rd quartile (14,346) is large, indicating high variability in sales. This wide range aligns with the observed volatility and fluctuations in the time series plot.
+
+The box plot does not show any outliers, meaning most sales values fall within the expected range. The high sales variability appears to be part of the natural sales fluctuations rather than anomalies.
+
+The box plot and summary show that sales have some noticeable peaks. There’s a high maximum sales number, much higher than the "usual" sales range. This could mean there are periods when demand for this drug spikes—maybe during flu season or other health events when more people need it.
+
+The maximum value (22,397) is considerably higher than the third quartile. Hence, here’s a high maximum sales number, much higher than the "usual" sales range. This could mean there are periods when demand for this drug spikes—maybe during flu season or other health events when more people need it.
+
+#### Decomposition 
+• Plot the decomposition of the time series. 
+
+```{r}
+
+
+decomp <- decompose(sales_ts, type="additive")
+autoplot(decomp)
+
+
+
+seasonal_component <- decomp$seasonal
+
+# Calculate average seasonal indices for each month
+monthly_indices <- tapply(seasonal_component, cycle(seasonal_component), mean)
+
+# Display the monthly indices
+print(round(monthly_indices, 2))
+
+```
+
+
+• Is the time series seasonal? 
+Yes, this time series is seasonal. We can tell because there’s a clear, repeating pattern in the seasonal component of the decomposition. 
+
+• Is the decomposition additive or multiplicative?  
+This decomposition is addictive as each month’s seasonal effect is a fixed amount added to or subtracted from the trend, showing consistent seasonal ups and downs across years.
+
+• If seasonal, what are the values of the seasonal monthly indices? 
+Positive values: Indicate that sales are usually higher than the baseline for that month. For example, a value of 1068.73 in June means that June typically adds around 1068.73 units to the baseline sales level.
+Negative values: Indicate that sales are usually lower than the baseline for that month. For example, a value of -1562.74 in February means that February typically reduces sales by around 1562.74 units from the baseline.
+
+• For which month is the time series value high, and for which month is it low?
+High Month: The month with the highest positive index value is likely June (based on the sample indices shown). This means June tends to add the most to the baseline, making it a peak month for sales.
+Low Month: The month with the lowest (most negative) index value appears to be February. This indicates that February usually has the biggest reduction from the baseline, making it the month with the lowest sales.
+
+• Can you think of the reason behind the high and low values in those months? 
+The high sales in June could be because people are more active in the summer, leading to higher demand for things like allergy meds, skincare, or pain relief for outdoor activities. It’s also a time when people feel comfortable with their insurance benefits mid-year and might spend more on healthcare.
+
+The low sales in February might be due to winter weather, with people staying indoors and buying less non-essential healthcare products. It’s also right after the holidays, so people may be spending less, and new insurance deductibles at the start of the year might lead to cautious healthcare spending.
+
+• Show the plot for time series adjusted for seasonality. Overlay this with the line for 
+actuals? Does seasonality have big fluctuations in the value of time series?  
+```{r}
+
+SATS <- seasadj(decomp)
+plot(sales_ts, ylab="Home Prices")
+lines(SATS, col="red")
+```
+
+
+Looking at the plot, the seasonally adjusted line (in red) and the actual line (in black) show some noticeable differences. The black line has clear ups and downs that reflect the seasonal impact, while the red line is smoother since it’s adjusted to remove those seasonal effects.
+
+From this, we can see that seasonality does have a significant influence on the time series. The actual sales line has regular peaks and dips, which means certain months consistently see higher or lower sales. These seasonal fluctuations add a lot of movement to the overall trend, which is smoothed out when we remove seasonality.
+
+In simple terms, the plot shows that seasonality creates big swings in sales, and without accounting for it, we might misinterpret the true underlying trend.
+
+
+###### Naïve Method 
+
+```{r}
+naive_fc = naive(sales_ts)
+plot(naive_fc)
+lines(naive_fc$fitted, col="green")
+accuracy(naive_fc)
+```
+Perform Residual Analysis for this technique.  
+
+```{r}
+naive_residual <- naive_fc$residuals
+naive_fitted <- naive_fc$fitted
+plot(naive_residual, ylab="Residual")
+hist(naive_residual, xlab="Residual")
+plot.ts(naive_fc$fitted,naive_fc$residuals,xy.labels = FALSE,xy.lines = FALSE)
+plot.ts(naive_fc$x,naive_fc$residuals,xy.labels = FALSE,xy.lines = FALSE)
+plot(naive_fitted, naive_residual)
+plot(sales_ts, naive_residual)
+Acf(naive_residual)
+accuracy(naive_fc)
+naive_forecast <- forecast(naive_fc,20)
+naive_forecast
+accuracy(naive_forecast)
+plot(naive_forecast)
+
+```
+
+
+o Do a plot of residuals. What does the plot indicate?
+The residual plot shows the differences between the actual values and the predicted values over time. Ideally, the residuals should fluctuate randomly around zero without any clear pattern. If we see this randomness, it means the model is doing a good job capturing the trend and seasonality. Any visible pattern, however, could indicate that the model is missing some information.
+
+o Do a Histogram plot of residuals. What does the plot indicate? 
+What does the plot indicate? The histogram of residuals shows how the errors are distributed. If the residuals are roughly centered around zero and follow a bell-shaped (normal) curve, it indicates that the model’s errors are fairly random and normally distributed. This is a good sign, as it suggests the model doesn’t systematically over- or under-predict.
+
+o Do a plot of fitted values vs. residuals. What does the plot indicate? 
+This scatter plot shows the fitted values (the model’s predictions) on the x-axis and the residuals on the y-axis. Ideally, we’d like to see no clear pattern in this plot—just random scatter around zero. If there’s a visible pattern (like a curve), it suggests the model might not be capturing some aspects of the data correctly, and adjustments could improve the model.
+
+o Do a plot of actual values vs. residuals. What does the plot indicate? 
+What does the plot indicate? Similar to the previous plot, this one compares the actual values with the residuals. Random scatter around zero means the model is doing a consistent job across different levels of sales. If residuals cluster in a pattern, it suggests inconsistencies in the model’s accuracy across different sales levels, indicating potential improvement areas.
+
+o Do an ACF plot of the residuals? What does this plot indicate? 
+What does this plot indicate? The ACF (Autocorrelation Function) plot shows if residuals are correlated over time. Ideally, residuals should be independent, with values close to zero for all lags. If we see significant peaks, it means that residuals are correlated, suggesting the model could be improved to account for this autocorrelation.
+
+• Print the five measures of accuracy for this forecasting technique 
+
+                  ME    RMSE      MAE       MPE     MAPE      MASE      
+Training set  157.275 3029.52 2104.495 0.6371928 20.12969 0.4670533 
+
+Forecast  
+o Time series value for next year. Show table and plot
+
+The forecast for the next year provides monthly predictions with confidence intervals. The forecast table shows a "Point Forecast" as the expected sales value for each month, along with intervals (Lo 80, Hi 80, Lo 95, Hi 95) that give a range within which future values are likely to fall, with 80% and 95% confidence levels.
+
+Summarize this forecasting technique 
+o How good is the accuracy? 
+Generally, lower values across these metrics indicate a more accurate model.
+Based on the accuracy metrics, if RMSE and MAE values are relatively low compared to the sales levels, the model provides a good level of accuracy for planning purposes.
+
+
+o What does it predict the time series value will be in one year? 
+The forecast gives a stable prediction around 10,151.93 for each month of the next year, with confidence intervals expanding over time, indicating increasing uncertainty.
+
+o Other observation 
+The residual and ACF plots provide insight into the model’s fit. If residuals are random and there’s no autocorrelation, it indicates that the model is well-suited for this data. However, any visible patterns in the residuals could mean that there’s room for further refinement of the model.
+
+
+7. Forecast for Next Year
+The forecast for the next year provides monthly predictions with confidence intervals. The forecast table shows a "Point Forecast" as the expected sales value for each month, along with intervals (Lo 80, Hi 80, Lo 95, Hi 95) that give a range within which future values are likely to fall, with 80% and 95% confidence levels.
+8. Summary of Forecasting Technique
+How good is the accuracy? Based on the accuracy metrics, if RMSE and MAE values are relatively low compared to the sales levels, the model provides a good level of accuracy for planning purposes.
+What does it predict the time series value will be in one year? The forecast gives a stable prediction around 10,151.93 for each month of the next year, with confidence intervals expanding over time, indicating increasing uncertainty.
+Other Observations: The residual and ACF plots provide insight into the model’s fit. If residuals are random and there’s no autocorrelation, it indicates that the model is well-suited for this data. However, any visible patterns in the residuals could mean that there’s room for further refinement of the model.
+
+
+#####Simple Moving Averages 
+• Plot the graph for the time series.  
+• Show the Simple Moving average of order three on the plot above in Red 
+• Show the Simple Moving average of order six on the plot above in Blue 
+• Show the Simple Moving average of order nine on the plot above in Green 
+• (Bonus) show the forecast for the next 12 months using one of the simple average 
+orders that you feel works best for time series 
+
+```{r}
+ma_forecast_1 = ma(sales_ts,order=3)
+ma_forecast_2 = ma(sales_ts,order=6)
+ma_forecast_3 = ma(sales_ts,order=9)
+
+plot(sales_ts)
+lines(ma_forecast_1, col="red")
+lines(ma_forecast_2, col="green")
+lines(ma_forecast_3, col="blue")
+
+maf <- ma(sales_ts,12)
+plot(maf)
+lines(ma_forecast_3, col="purple")
+
+```
+
+• What are your observations of the plot as the moving average order goes up? 
+
+Smoother Trends: As the moving average order goes up, the line becomes smoother. Higher orders (like 9) are more effective in showing the long-term trend without being influenced by short-term variations.
+
+Lag Effect: With higher orders, there’s more lag in the moving average line, meaning it takes longer to respond to recent changes. This can make higher-order moving averages less responsive to sudden shifts in the data.
+
+Ideal for Long-Term Trends: Higher-order moving averages are ideal for identifying the general direction over time, while lower-order moving averages capture more short-term patterns.
+
+In short, higher moving average orders provide a clearer picture of the long-term trend, while lower orders are better for understanding short-term variations. For stable trend forecasting, order 9 appears to work well for this dataset.
+
+#####Simple Smoothing 
+• Perform a simple smoothing forecast for the next 12 months for the time series.  
+
+
+```{r}
+
+
+ses_forecast <- ses(sales_ts)
+plot(ses_forecast)
+summary(ses_forecast)
+attributes(ses_forecast)
+#accuracy
+accuracy(ses_forecast)
+ses_forecast1 <- ses(sales_ts,12)
+plot(ses_forecast1)
+
+plot(ses_forecast1$residuals)
+hist(ses_forecast1$residuals)
+Acf(ses_forecast1$residuals)
+forecast(ses_forecast1)
+
+```
+
+o What is the value of alpha?  What does that value signify? 
+The alpha value is 0.4319. Here, an alpha of 0.4319 means the model moderately weights recent data but still considers past data. Higher alpha values would make the model more responsive to recent changes.
+
+o What is the value of the initial state?  
+The initial state is 1472.029. This is the starting level that the model uses at the beginning of the forecast period, setting a baseline for subsequent smoothing.
+
+o What is the value of sigma?  What does the sigma signify?
+Sigma is 2603.101, which represents the standard deviation of the model’s residuals. In simpler terms, sigma gives an idea of how much variability or "error" there is in the model’s predictions. A smaller sigma would indicate that the model predictions are closer to the actual data.
+
+• Perform Residual Analysis for this technique.  
+o Do a plot of residuals. What does the plot indicate? 
+The residual plot shows the leftover variation after accounting for the trend. Ideally, these should hover around zero with no clear pattern, indicating that the model fits the data well. Any pattern here might mean the model could be missing some information.
+
+o Do a Histogram plot of residuals. What does the plot indicate? 
+The histogram helps check if residuals are centered around zero and normally distributed. If it shows a bell shape centered at zero, that’s a good sign of random error in the model.
+
+o Do a plot of fitted values vs. residuals. What does the plot indicate?  
+This scatter plot should ideally show no clear pattern. If it does, it indicates the model might not be capturing some data characteristics properly. Random scatter around zero is what we want to see here.
+
+o Do a plot of actual values vs. residuals. What does the plot indicate? 
+Similar to the previous plot, this one compares the actual values with residuals. If the residuals are randomly spread around zero across actual values, the model is performing consistently well. Patterns could suggest inconsistencies in the model’s performance.
+
+o Do an ACF plot of the residuals? What does this plot indicate? 
+The ACF plot shows if there’s any autocorrelation in residuals. Ideally, residuals should be uncorrelated (close to zero). If there’s significant autocorrelation, the model might have missed capturing some patterns in the data.
+
+• Print the five measures of accuracy for this forecasting technique 
+                ME     RMSE      MAE      MPE     MAPE      MASE       
+Training set 521.0807 2556.194 1608.255 5.757111 15.49006 0.3569223 
+
+• Forecast  
+o Time series value for next year. Show table and plot 
+The forecast for the next 12 months predicts a constant sales value of around 14,075.16 each month, with confidence intervals indicating a possible range for each prediction. The confidence intervals widen over time, reflecting increasing uncertainty as we look further into the future.
+
+
+• Summarize this forecasting technique 
+
+o How good is the accuracy? 
+The model’s accuracy is decent, as indicated by reasonable error measures (RMSE, MAE, etc.). The errors are not excessively large, so the model is fairly reliable for short-term forecasting.
+
+
+o What does it predict the time series value will be in one year? 
+The model forecasts a stable value of 14,075.16 per month for the next year, showing a lack of strong growth or decline trends.
+
+o Other observation
+Simple exponential smoothing assumes a stable trend, so it’s best for time series without strong seasonality or trends. The model’s predictions are steady, which makes sense if the historical data shows little variation in recent periods. If seasonality or growth trends are expected, a more complex model may provide better accuracy.
+
+#####Holt-Winters 
+
+Perform Holt-Winters forecast for the next 12 months for the time series.  
+
+
+```{r}
+
+hq <- hw(sales_ts, seasonal = "additive")
+plot(hq)
+
+summary(hq)
+
+hq1 <- hw(sales_ts,12)
+plot(hq)
+print(hq)
+
+accuracy(hq1)
+
+plot(hq1$residuals)
+hist(hq1$residuals)
+Acf(hq1$residuals)
+forecast(hq1)
+```
+
+
+
+o What is the value of alpha?  What does that value signify?  
+Alpha is 0.3176. This value signifies the smoothing parameter for the level of the series, indicating how much weight is given to recent observations. A lower alpha means the forecast is less reactive to recent changes.
+
+o What is the value of beta? What does that value signify? 
+Beta is 0.0862. This value represents the trend smoothing parameter, controlling how much emphasis is placed on the trend component. A lower beta suggests a more stable trend.
+
+o What is the value of gamma? What does that value signify? 
+Gamma is 1e-04 . This value controls the seasonality component's smoothing. A very low gamma means seasonality is kept relatively stable without reacting strongly to new data.
+
+o What is the value of initial states for the level, trend, and seasonality? What do 
+these values signify?  
+The initial level is 818.42, the initial trend is 343.23, and initial seasonality varies for each season with values like -1565.1 for January and 2154.8 for June. These values represent the starting points for the level, trend, and seasonal patterns in the data, setting the foundation for the model’s forecast.
+
+o What is the value of sigma?  What does the sigma signify? 
+Sigma is 2428.54, representing the estimated standard deviation of the residuals. It provides an idea of the average deviation of the observed values from the fitted values.
+
+• Perform Residual Analysis for this technique. 
+o Do a plot of residuals. What does the plot indicate? 
+The residuals plot shows fluctuations around zero, indicating the model is capturing the main trends, but some variations are not explained by the model.
+
+o Do a Histogram plot of residuals. What does the plot indicate? 
+The histogram shows that residuals are roughly centered around zero, though not perfectly symmetrical, which suggests minor deviations from normality.
+
+o Do a plot of fitted values vs. residuals. What does the plot indicate? 
+This plot helps us check for any patterns. Ideally, the points should be scattered randomly around zero, indicating the model has accounted for the main patterns in the data without systematic errors.
+
+o Do a plot of actual values vs. residuals. What does the plot indicate?
+The scatter plot between actual values and residuals should ideally show no obvious pattern. If there's no clear pattern, it suggests the model is fitting the data well.
+
+o Do an ACF plot of the residuals? What does this plot indicate? 
+The ACF plot of the residuals shows whether there’s any autocorrelation left in the residuals. Minimal spikes within the confidence interval indicate that the residuals are approximately white noise, implying a good model fit.
+
+
+• Print the five measures of accuracy for this forecasting technique 
+                    ME     RMSE      MAE       MPE     MAPE      MASE       
+Training set -210.3775 2052.493 1661.449 -3.401198 33.49673 0.3687275
+
+• Forecast  
+o Time series value for next year. Show table and plot 
+The forecast table and plot show the expected values for the next year, with a gradual decreasing trend and wider prediction intervals, reflecting growing uncertainty over time.
+
+
+• Summarize this forecasting technique 
+o How good is the accuracy? 
+The accuracy is reasonable, but some deviations in the residuals indicate that improvements could be made, possibly by trying a multiplicative model if seasonality impacts vary with level.
+
+o What does it predict the time series value will be in one year? 
+In one year, the forecasted value is approximately 9963.07 with an 80% prediction interval of around 2036.10 to 17890.05.
+
+o Other observation 
+The model captures the seasonal and trend components well, but as time progresses, uncertainty increases, as shown by the widening intervals. This suggests that external factors or a different seasonality handling might improve future forecasts.
+
+
+####Accuracy Summary 
+Show a table of all the forecast methods above with their accuracy measures.
+
+```{r}
+# Define different forecast methods
+naive_forecast <- naive(sales_ts, h = 12)
+ses_forecast <- ses(sales_ts, h = 12)
+holt_forecast <- holt(sales_ts, h = 12)
+hw_forecast <- hw(sales_ts, seasonal = "additive", h = 12)
+hw_multiplicative_forecast <- hw(sales_ts, seasonal = "multiplicative", h = 12)
+
+# Calculate accuracy for each method
+naive_accuracy <- accuracy(naive_forecast)
+ses_accuracy <- accuracy(ses_forecast)
+holt_accuracy <- accuracy(holt_forecast)
+hw_add_accuracy <- accuracy(hw_forecast)
+hw_mult_accuracy <- accuracy(hw_multiplicative_forecast)
+
+# Combine accuracy measures into a table
+accuracy_table <- rbind(
+  Naive = naive_accuracy,
+  SES = ses_accuracy,
+  Holt = holt_accuracy,
+  `Holt-Winters Additive` = hw_add_accuracy,
+  `Holt-Winters Multiplicative` = hw_mult_accuracy
+)
+
+# Display the accuracy table
+print("Accuracy Measures for Different Forecasting Methods:")
+print(accuracy_table)
+
+# Determine the best and worst forecast method for each accuracy measure
+best_methods <- apply(accuracy_table, 2, function(x) rownames(accuracy_table)[which.min(x)])
+worst_methods <- apply(accuracy_table, 2, function(x) rownames(accuracy_table)[which.max(x)])
+
+# Combine best and worst methods into a summary table
+summary_table <- data.frame(
+  Measure = colnames(accuracy_table),
+  Best_Method = best_methods,
+  Worst_Method = worst_methods
+)
+
+# Display the summary table of best and worst methods
+print("Best and Worst Forecast Methods for Each Accuracy Measure:")
+print(summary_table)
+
+```
+  
+
+• Separately define each forecast method and why it is useful. Show the best and worst 
+forecast method for each of the accuracy measures.  
+
+Naive Forecast: Uses the last observed value as the forecast for all future values. Useful for highly random data where trends or seasonality do not add predictive power.
+
+Simple Exponential Smoothing (SES): This method smooths data without a trend or seasonality component. It’s useful when the time series is relatively stable.
+
+Holt’s Linear Trend Model: An extension of SES, it accounts for linear trends in the data. Useful when there’s a consistent upward or downward trend.
+
+Holt-Winters Additive Model: Captures both trend and additive seasonality. Suitable for data with linear trends and seasonality that doesn’t vary with the level of the series.
+
+Holt-Winters Multiplicative Model: Similar to the additive model but uses multiplicative seasonality, making it more effective when seasonal variations increase with the level of the time series.
+
+
+#####Conclusion:
+
+• Summarize your analysis of time series value over the time period.
+Looking at the time series data over the period, there's a clear upward trend with seasonal fluctuations. The values increase during certain months and then dip, indicating a seasonal effect. Over time, these peaks and valleys reflect a steady overall growth trend, although recently the values seem to have reached a slight decline
+
+• Based on your analysis and forecast above, do you think the value of the time series will 
+increase, decrease, or stay flat over the next year? How about the next 2 years? 
+
+For Next Year: The forecast suggests that the value of the time series might remain relatively stable, with minor fluctuations around the current level. It’s unlikely we’ll see significant growth, and if anything, the forecast suggests a slight dip.
+
+For Next 2 Years: Over the longer term, some models hint at a possible decline. While the trend might not sharply decrease, it does indicate a tapering off rather than continued strong growth.
+
+##• Rank forecasting methods for this time series based on historical values. 
+Holt-Winters Additive Model: Best captures the seasonality and trend, and provided the most reliable forecast accuracy in historical values.
+
+Holt-Winters Multiplicative Model: Useful for series where seasonality increases with value, but in this case, it performed slightly below the additive version.
+
+Holt’s Linear Trend Model: Decent for trending data but lacks the seasonal component that seems important here.
+
+Simple Exponential Smoothing (SES): Works well for stable data without a trend, but this series has both trend and seasonality.
+
+Naive Forecast: Simple and effective for purely random data but not ideal when a trend or seasonality is present.
